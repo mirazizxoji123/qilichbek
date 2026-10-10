@@ -3,6 +3,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/components/language-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { MotionConfig } from "framer-motion";
 
 export const metadata: Metadata = {
   title: "QUICKSTAY — stays worth remembering",
@@ -18,9 +19,11 @@ export default function RootLayout({
     <html lang="uz">
       <body>
         <LanguageProvider>
-          <SiteHeader />
-          <main>{children}</main>
-          <SiteFooter />
+          <MotionConfig reducedMotion="user">
+            <SiteHeader />
+            <main>{children}</main>
+            <SiteFooter />
+          </MotionConfig>
         </LanguageProvider>
       </body>
     </html>

@@ -1,18 +1,12 @@
-import { readdir, readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-const roots = ["messages"];
-const files = [];
-async function collect(directory) {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const fullPath = join(directory, entry.name);
-    if (entry.isDirectory()) await collect(fullPath);
-    else if (entry.name.endsWith(".json")) files.push(fullPath);
-  }
-}
-for (const root of roots) await collect(root);
+const files = ["messages/uz.json", "messages/ru.json", "messages/en.json"];
 
-const requiredKeys = ["nav.discover", "search.destination", "hotel.book", "booking.confirmed", "chat.title", "account.title"];
+const requiredKeys = [
+  "nav.discover", "search.destination", "search.reset", "hotel.book", "booking.confirmed",
+  "chat.title", "account.title", "category.Luxury", "amenities.Breakfast",
+];
 const baseline = JSON.parse(await readFile("messages/uz.json", "utf8"));
 function flatten(value, prefix = "") {
   return Object.entries(value).flatMap(([key, child]) =>
@@ -34,4 +28,18 @@ for (const file of files) {
     throw new Error(`${file}: translation key mismatch. Missing: ${missing.join(", ") || "none"}; extra: ${extra.join(", ") || "none"}`);
   }
 }
-console.log(`Validated ${files.length} translation JSON files with ${keys.length} matching keys.`);
+
+const source = await readFile("src/lib/hotels.ts", "utf8");
+const catalogSource = source.split("const names = [")[1]?.split("] as const;")[0];
+if (!catalogSource) throw new Error("Could not locate the seeded hotel catalog.");
+const records = [...catalogSource.matchAll(/^\s*\["([^"]+)",\s*"([^"]+)"/gm)];
+const slugs = records.map((record) => record[1]);
+if (slugs.length < 50 || new Set(slugs).size !== slugs.length) {
+  throw new Error(`Catalog requires at least 50 unique slugs; found ${slugs.length}.`);
+}
+const photoPaths = [...source.matchAll(/"\/stays\/([a-z0-9-]+\.jpg)"/g)].map((match) => match[1]);
+const hero = (await readFile("src/app/page.tsx", "utf8")).match(/url\("\/stays\/([a-z0-9-]+\.jpg)"\)/)?.[1];
+for (const photo of new Set([...photoPaths, ...(hero ? [hero] : [])])) {
+  await access(join("public", "stays", photo));
+}
+console.log(`Validated ${files.length} locale JSON files (${keys.length} matching keys), ${slugs.length} unique seeded hotels, and ${new Set(photoPaths).size + (hero ? 1 : 0)} bundled photo references.`);
