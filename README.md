@@ -19,6 +19,7 @@ npm run build
 ```
 
 The checked-in `package-lock.json` is the source of dependency versions. Node.js 20 or later is recommended.
+The full Next.js production build uses `.next\` (Netlify's configured build directory). The static export build is isolated in `.next-static\` and copies its verified site to `out\`.
 
 ## Booking, chat, and authentication
 
